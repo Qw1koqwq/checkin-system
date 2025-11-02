@@ -78,27 +78,27 @@
             </template>
 
             <div v-if="checkInCode" class="code-display">
-              <div class="code-number">{{ checkInCode.code }}</div>
-              <div class="code-info">
-                <el-icon><Timer /></el-icon>
-                <span>有效期至: {{ formatTime(checkInCode.expiresAt) }}</span>
+              <div v-if="isExpired" class="code-expired">
+                <div class="expired-icon">⏰</div>
+                <div class="expired-text">签到码已过期</div>
+                <div class="expired-hint">请重新生成签到码</div>
               </div>
-              <div class="countdown">
-                <el-progress
-                  :percentage="timePercentage"
-                  :color="progressColor"
-                  :stroke-width="10"
-                  :show-text="false"
-                />
-                <div class="time-left">剩余 {{ timeLeft }}</div>
-              </div>
-              <el-alert
-                v-if="isExpired"
-                title="签到码已过期，请重新生成"
-                type="warning"
-                :closable="false"
-                show-icon
-              />
+              <template v-else>
+                <div class="code-number">{{ checkInCode.code }}</div>
+                <div class="code-info">
+                  <el-icon><Timer /></el-icon>
+                  <span>有效期至: {{ formatTime(checkInCode.expiresAt) }}</span>
+                </div>
+                <div class="countdown">
+                  <el-progress
+                    :percentage="timePercentage"
+                    :color="progressColor"
+                    :stroke-width="10"
+                    :show-text="false"
+                  />
+                  <div class="time-left">剩余 {{ timeLeft }}</div>
+                </div>
+              </template>
             </div>
             <el-empty v-else description="点击按钮生成签到码" />
           </el-card>
@@ -361,8 +361,18 @@ const stopAutoRefresh = () => {
 }
 
 const startCountdown = () => {
+  // 立即更新一次当前时间
+  currentTime.value = Date.now()
+  
   countdownTimer = window.setInterval(() => {
     currentTime.value = Date.now()
+    
+    // 检查签到码是否过期，如果过期则清除store中的签到码
+    if (checkInCode.value && isExpired.value && checkinStore.activeCheckInCode) {
+      if (checkinStore.activeCheckInCode.activityId === activityId) {
+        checkinStore.clearCheckInCode()
+      }
+    }
   }, 1000)
 }
 
@@ -383,8 +393,10 @@ const handleAutoRefreshChange = (value: boolean) => {
 
 const isExpired = computed(() => {
   if (!checkInCode.value) return false
-  // 后端返回的UTC时间字符串已经带'Z'后缀
-  return new Date(checkInCode.value.expiresAt) < new Date()
+  // 使用响应式的currentTime以触发更新
+  const now = new Date(currentTime.value)
+  const expires = new Date(checkInCode.value.expiresAt)
+  return expires < now
 })
 
 const timeLeft = computed(() => {
@@ -410,10 +422,25 @@ const timePercentage = computed(() => {
 })
 
 const progressColor = computed(() => {
-  const percentage = timePercentage.value
-  if (percentage > 50) return '#67c23a'
-  if (percentage > 20) return '#e6a23c'
-  return '#f56c6c'
+  if (!checkInCode.value) return '#67c23a'
+  
+  // 计算剩余时间（毫秒）
+  const now = new Date(currentTime.value)
+  const expires = new Date(checkInCode.value.expiresAt)
+  const remaining = expires.getTime() - now.getTime()
+  
+  // 计算总时间（毫秒）
+  const created = new Date(checkInCode.value.createdAt)
+  const total = expires.getTime() - created.getTime()
+  
+  // 剩余1分钟或以下：红色
+  if (remaining <= 60000) return '#f56c6c'
+  
+  // 剩余时间 ≤ 1/3 总时间：黄色
+  if (remaining <= total / 3) return '#e6a23c'
+  
+  // 剩余时间 > 1/3 总时间：绿色
+  return '#67c23a'
 })
 
 const formatTime = (time: string) => {
@@ -550,6 +577,40 @@ const getMethodLabel = (method: string) => {
   font-weight: 600;
   color: #606266;
   margin-top: 12px;
+}
+
+.code-expired {
+  padding: 40px 20px;
+  text-align: center;
+}
+
+.expired-icon {
+  font-size: 64px;
+  margin-bottom: 16px;
+  animation: pulse 2s ease-in-out infinite;
+}
+
+.expired-text {
+  font-size: 28px;
+  font-weight: bold;
+  color: #f56c6c;
+  margin-bottom: 8px;
+}
+
+.expired-hint {
+  font-size: 14px;
+  color: #909399;
+}
+
+@keyframes pulse {
+  0%, 100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+  50% {
+    transform: scale(1.1);
+    opacity: 0.8;
+  }
 }
 
 .stats-card {

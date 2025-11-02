@@ -4,7 +4,7 @@
       <div
         v-if="checkinStore.showFloatingWindow && checkinStore.activeCheckInCode"
         class="floating-window"
-        :class="{ 'minimized': isMinimized }"
+        :class="{ 'minimized': isMinimized, [`status-${windowStatusColor}`]: true }"
       >
         <div class="window-header" @click="toggleMinimize">
           <div class="header-left">
@@ -26,7 +26,7 @@
             <h3>{{ checkinStore.activeCheckInCode.activityTitle }}</h3>
           </div>
           
-          <div class="code-display">
+          <div class="code-display" :class="`code-${windowStatusColor}`">
             <div class="code-number">{{ checkinStore.activeCheckInCode.code }}</div>
           </div>
           
@@ -130,10 +130,33 @@ const countdownPercentage = computed(() => {
 })
 
 const progressColor = computed(() => {
-  const percentage = countdownPercentage.value
-  if (percentage > 50) return '#67c23a'
-  if (percentage > 20) return '#e6a23c'
-  return '#f56c6c'
+  if (!checkinStore.activeCheckInCode) return '#67c23a'
+  
+  // 计算剩余时间（毫秒）
+  const now = new Date(currentTime.value)
+  const expires = new Date(checkinStore.activeCheckInCode.expiresAt)
+  const remaining = expires.getTime() - now.getTime()
+  
+  // 计算总时间（毫秒）
+  const started = new Date(checkinStore.activeCheckInCode.startedAt)
+  const total = expires.getTime() - started.getTime()
+  
+  // 剩余1分钟或以下：红色
+  if (remaining <= 60000) return '#f56c6c'
+  
+  // 剩余时间 ≤ 1/3 总时间：黄色
+  if (remaining <= total / 3) return '#e6a23c'
+  
+  // 剩余时间 > 1/3 总时间：绿色
+  return '#67c23a'
+})
+
+// 窗口状态颜色
+const windowStatusColor = computed(() => {
+  const color = progressColor.value
+  if (color === '#f56c6c') return 'danger'
+  if (color === '#e6a23c') return 'warning'
+  return 'success'
 })
 
 const goToCheckInPage = () => {
@@ -229,15 +252,46 @@ onUnmounted(() => {
   bottom: 20px;
   right: 20px;
   width: 320px;
-  background: rgba(220, 252, 231, 0.75);
   backdrop-filter: blur(10px);
   -webkit-backdrop-filter: blur(10px);
-  border: 1px solid rgba(134, 239, 172, 0.3);
   border-radius: 12px;
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.15);
   z-index: 9999;
   overflow: hidden;
   transition: all 0.3s ease;
+}
+
+/* 成功状态 - 绿色 */
+.floating-window.status-success {
+  background: rgba(220, 252, 231, 0.75);
+  border: 1px solid rgba(134, 239, 172, 0.3);
+}
+
+.floating-window.status-success .window-header {
+  background: rgba(34, 197, 94, 0.85);
+  border-bottom: 1px solid rgba(134, 239, 172, 0.3);
+}
+
+/* 警告状态 - 黄色 */
+.floating-window.status-warning {
+  background: rgba(254, 243, 199, 0.75);
+  border: 1px solid rgba(251, 191, 36, 0.3);
+}
+
+.floating-window.status-warning .window-header {
+  background: rgba(245, 158, 11, 0.85);
+  border-bottom: 1px solid rgba(251, 191, 36, 0.3);
+}
+
+/* 危险状态 - 红色 */
+.floating-window.status-danger {
+  background: rgba(254, 226, 226, 0.75);
+  border: 1px solid rgba(248, 113, 113, 0.3);
+}
+
+.floating-window.status-danger .window-header {
+  background: rgba(239, 68, 68, 0.85);
+  border-bottom: 1px solid rgba(248, 113, 113, 0.3);
 }
 
 .floating-window.minimized {
@@ -249,13 +303,12 @@ onUnmounted(() => {
   justify-content: space-between;
   align-items: center;
   padding: 12px 16px;
-  background: rgba(34, 197, 94, 0.85);
   backdrop-filter: blur(8px);
   -webkit-backdrop-filter: blur(8px);
-  border-bottom: 1px solid rgba(134, 239, 172, 0.3);
   color: white;
   cursor: pointer;
   user-select: none;
+  transition: all 0.3s ease;
 }
 
 .header-left {
@@ -297,15 +350,34 @@ onUnmounted(() => {
 }
 
 .code-display {
-  background: rgba(22, 163, 74, 0.9);
   backdrop-filter: blur(8px);
   -webkit-backdrop-filter: blur(8px);
-  border: 1px solid rgba(134, 239, 172, 0.4);
   border-radius: 12px;
   padding: 24px;
   margin-bottom: 16px;
   text-align: center;
+  transition: all 0.3s ease;
+}
+
+/* 成功状态 - 绿色签到码框 */
+.code-display.code-success {
+  background: rgba(22, 163, 74, 0.9);
+  border: 1px solid rgba(134, 239, 172, 0.4);
   box-shadow: 0 4px 16px rgba(22, 163, 74, 0.2);
+}
+
+/* 警告状态 - 黄色签到码框 */
+.code-display.code-warning {
+  background: rgba(217, 119, 6, 0.9);
+  border: 1px solid rgba(251, 191, 36, 0.4);
+  box-shadow: 0 4px 16px rgba(217, 119, 6, 0.2);
+}
+
+/* 危险状态 - 红色签到码框 */
+.code-display.code-danger {
+  background: rgba(220, 38, 38, 0.9);
+  border: 1px solid rgba(248, 113, 113, 0.4);
+  box-shadow: 0 4px 16px rgba(220, 38, 38, 0.2);
 }
 
 .code-number {
