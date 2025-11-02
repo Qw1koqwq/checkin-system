@@ -296,8 +296,9 @@ def admin_delete_activity(activity_id):
 def admin_export_activities():
     """管理员导出活动列表"""
     from flask import make_response
-    import csv
-    from io import StringIO
+    from openpyxl import Workbook
+    from openpyxl.styles import Font, PatternFill, Alignment
+    from io import BytesIO
     
     identity = get_jwt_identity()
     
@@ -308,15 +309,37 @@ def admin_export_activities():
     # 获取所有活动
     activities = Activity.query.order_by(Activity.created_at.desc()).all()
     
-    # 创建CSV
-    si = StringIO()
-    writer = csv.writer(si)
+    # 创建Excel工作簿
+    wb = Workbook()
+    ws = wb.active
+    ws.title = '活动列表'
+    
+    # 设置标题样式
+    header_fill = PatternFill(start_color='4472C4', end_color='4472C4', fill_type='solid')
+    header_font = Font(color='FFFFFF', bold=True, size=12)
+    header_alignment = Alignment(horizontal='center', vertical='center')
     
     # 写入表头
-    writer.writerow([
+    headers = [
         'ID', '活动标题', '分类', '状态', '组织者', '开始时间', '结束时间', 
         '地点', '最大人数', '当前人数', '报名截止时间', '创建时间'
-    ])
+    ]
+    ws.append(headers)
+    
+    # 设置表头样式
+    for cell in ws[1]:
+        cell.fill = header_fill
+        cell.font = header_font
+        cell.alignment = header_alignment
+    
+    # 分类映射
+    category_map = {
+        'academic': '学术',
+        'cultural': '文化',
+        'sports': '体育',
+        'volunteer': '志愿',
+        'other': '其他'
+    }
     
     # 写入数据
     for activity in activities:
@@ -331,16 +354,7 @@ def admin_export_activities():
         else:
             actual_status = '已结束'
         
-        # 分类映射
-        category_map = {
-            'academic': '学术',
-            'cultural': '文化',
-            'sports': '体育',
-            'volunteer': '志愿',
-            'other': '其他'
-        }
-        
-        writer.writerow([
+        row = [
             activity.id,
             activity.title,
             category_map.get(activity.category, activity.category),
@@ -353,14 +367,22 @@ def admin_export_activities():
             activity.current_participants,
             activity.registration_deadline.strftime('%Y-%m-%d %H:%M:%S'),
             activity.created_at.strftime('%Y-%m-%d %H:%M:%S')
-        ])
+        ]
+        ws.append(row)
+    
+    # 调整列宽
+    column_widths = [8, 30, 10, 10, 15, 20, 20, 20, 10, 10, 20, 20]
+    for i, width in enumerate(column_widths, start=1):
+        ws.column_dimensions[chr(64 + i)].width = width
+    
+    # 保存到内存
+    output = BytesIO()
+    wb.save(output)
+    output.seek(0)
     
     # 创建响应
-    output = si.getvalue()
-    si.close()
-    
-    response = make_response(output)
-    response.headers['Content-Type'] = 'text/csv; charset=utf-8-sig'
-    response.headers['Content-Disposition'] = f'attachment; filename=activities_{datetime.now().strftime("%Y%m%d_%H%M%S")}.csv'
+    response = make_response(output.getvalue())
+    response.headers['Content-Type'] = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+    response.headers['Content-Disposition'] = f'attachment; filename=activities_{datetime.now().strftime("%Y%m%d_%H%M%S")}.xlsx'
     
     return response

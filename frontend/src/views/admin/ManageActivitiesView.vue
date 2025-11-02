@@ -244,14 +244,16 @@ const handleExport = async () => {
     const response = await activityApi.adminExportActivities()
     
     // Create download link
-    const blob = new Blob([response.data], { type: 'text/csv;charset=utf-8-sig' })
+    const blob = new Blob([response.data], { 
+      type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' 
+    })
     const url = window.URL.createObjectURL(blob)
     const link = document.createElement('a')
     link.href = url
     
     // Get filename from response headers or use default
     const contentDisposition = response.headers['content-disposition']
-    let filename = `activities_${new Date().getTime()}.csv`
+    let filename = `activities_${new Date().getTime()}.xlsx`
     if (contentDisposition) {
       const filenameMatch = contentDisposition.match(/filename=(.+)/)
       if (filenameMatch) {
