@@ -27,7 +27,10 @@ def get_activities():
     if keyword:
         query = query.filter(Activity.title.contains(keyword))
     if start_date:
-        query = query.filter(Activity.start_time >= datetime.fromisoformat(start_date))
+        # 匹配当天开始的活动（从00:00:00到23:59:59）
+        start_datetime = datetime.fromisoformat(start_date)
+        end_datetime = start_datetime.replace(hour=23, minute=59, second=59, microsecond=999999)
+        query = query.filter(Activity.start_time >= start_datetime, Activity.start_time <= end_datetime)
     
     # 分页
     pagination = query.order_by(Activity.created_at.desc()).paginate(

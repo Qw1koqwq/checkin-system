@@ -16,34 +16,46 @@
               <el-tag :type="statusType" effect="plain">{{ statusLabel }}</el-tag>
             </div>
           </div>
-          <div v-if="authStore.isStudent" class="header-right">
-            <el-button
-              v-if="canRegister"
-              type="primary"
-              size="large"
-              :icon="Check"
-              :loading="registering"
-              @click="handleRegister"
-            >
-              立即报名
-            </el-button>
-            <el-button
-              v-else-if="isRegistered"
-              type="success"
-              size="large"
-              :icon="CircleCheck"
-              disabled
-            >
-              已报名
-            </el-button>
-            <el-button
-              v-else
-              type="info"
-              size="large"
-              disabled
-            >
-              报名已满
-            </el-button>
+          <div class="header-right">
+            <template v-if="!authStore.isLoggedIn">
+              <el-button
+                type="primary"
+                size="large"
+                :icon="Lock"
+                @click="goToLogin"
+              >
+                登录后报名
+              </el-button>
+            </template>
+            <template v-else-if="authStore.isStudent">
+              <el-button
+                v-if="canRegister"
+                type="primary"
+                size="large"
+                :icon="Check"
+                :loading="registering"
+                @click="handleRegister"
+              >
+                立即报名
+              </el-button>
+              <el-button
+                v-else-if="isRegistered"
+                type="success"
+                size="large"
+                :icon="CircleCheck"
+                disabled
+              >
+                已报名
+              </el-button>
+              <el-button
+                v-else
+                type="info"
+                size="large"
+                disabled
+              >
+                报名已满
+              </el-button>
+            </template>
           </div>
         </div>
 
@@ -206,7 +218,8 @@ import {
   PriceTag,
   TrendCharts,
   List,
-  Picture
+  Picture,
+  Lock
 } from '@element-plus/icons-vue'
 import type { Activity } from '@/types'
 
@@ -460,6 +473,10 @@ const handleSubItemConfirm = () => {
     return
   }
   submitRegistration(selectedSubItem.value)
+}
+
+const goToLogin = () => {
+  router.push({ name: 'Login', query: { redirect: route.fullPath } })
 }
 </script>
 

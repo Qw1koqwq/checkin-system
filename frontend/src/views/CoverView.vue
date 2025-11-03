@@ -16,7 +16,6 @@
           <el-icon :size="80"><Calendar /></el-icon>
         </div>
         <h1 class="system-title">班级活动报名系统</h1>
-        <p class="system-subtitle">Class Activity Registration System</p>
         <div class="title-divider"></div>
       </div>
 
@@ -289,17 +288,9 @@ const goToActivities = () => {
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
-  margin: 0 0 12px 0;
+  margin: 0;
   letter-spacing: 2px;
   text-shadow: 0 2px 10px rgba(0, 137, 123, 0.1);
-}
-
-.system-subtitle {
-  font-size: 16px;
-  color: #546e7a;
-  font-weight: 400;
-  letter-spacing: 1px;
-  margin: 0;
 }
 
 .title-divider {
