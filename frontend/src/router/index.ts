@@ -5,7 +5,8 @@ import { useAuthStore } from '@/stores/auth'
 const routes: RouteRecordRaw[] = [
   {
     path: '/',
-    redirect: '/activities'
+    name: 'Cover',
+    component: () => import('@/views/CoverView.vue')
   },
   {
     path: '/login',
@@ -121,6 +122,18 @@ router.beforeEach((to, from, next) => {
   // Initialize auth from localStorage
   if (!authStore.accountUser && localStorage.getItem('accountUser')) {
     authStore.initAuth()
+  }
+
+  // Redirect logged-in users from cover page to their default page
+  if (to.name === 'Cover' && authStore.isLoggedIn) {
+    if (authStore.isAdmin) {
+      next({ name: 'ManageOrganizers' })
+    } else if (authStore.isOrganizer) {
+      next({ name: 'OrganizerDashboard' })
+    } else {
+      next({ name: 'Activities' })
+    }
+    return
   }
 
   // Check if route requires authentication
